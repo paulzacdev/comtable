@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Accounting OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #020205; font-family: sans-serif; }
+        .glass { background: rgba(0, 242, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(0, 242, 255, 0.3); }
+        .neon-text { text-shadow: 0 0 10px #00f2ff; }
+        .btn-neon { transition: all 0.3s; border: 1px solid #00f2ff; }
+        .btn-neon:hover { background: #00f2ff; color: black; box-shadow: 0 0 20px #00f2ff; }
+    </style>
+</head>
+<body class="bg-black">
+    <div class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-8 text-cyan-400">
+        <header class="flex justify-between items-center pointer-events-auto">
+            <div class="glass p-4 rounded-xl">
+                <h1 class="text-2xl font-bold">💠 ACCOUNTING-AI OS <span class="text-xs bg-cyan-500 text-black px-2 py-1 rounded">INTELLIGENCE v1.0</span></h1>
+            </div>
+        </header>
+        <div class="flex justify-between items-end h-full">
+            <div class="pointer-events-auto space-y-4 glass p-6 rounded-xl w-64">
+                <h3 class="text-xs font-bold uppercase opacity-50 mb-4">Contrôle PC</h3>
+                <button onclick="execute('open_calculator')" class="w-full p-3 bg-cyan-500/10 btn-neon rounded-lg text-left hover:bg-cyan-500 hover:text-black transition-all">🖩 Calc</button>
+                <button onclick="execute('open_notepad')" class="w-full p-3 bg-cyan-500/10 btn-neon rounded-lg text-left hover:bg-cyan-500 hover:text-black transition-all">📝 Notepad</button>
+                <button onclick="execute('open_explorer')" class="w-full p-3 bg-cyan-500/10 btn-neon rounded-lg text-left hover:bg-cyan-500 hover:text-black transition-all">📁 Explorer</button>
+            </div>
+
+            <div class="pointer-events-auto space-y-4 glass p-6 rounded-xl w-80">
+                <h3 class="text-xs font-bold uppercase opacity-50 mb-4">Analyse IA Documentaire</h3>
+                <div class="flex flex-col gap-4">
+                    <input type="file" id="fileInput" class="hidden" onchange="uploadFile()">
+                    <button onclick="document.getElementById('fileInput').click()" class="w-full p-4 bg-cyan-500/20 border border-dashed border-cyan-500 rounded-xl hover:bg-cyan-500/40 transition-all text-center cursor-pointer">
+                        📤 Télécharger une facture
+                    </button>
+                    <div id="result" class="hidden p-3 bg-black/50 border border-cyan-500/30 rounded-lg text-[10px] space-y-2 max-h-40 overflow-y-auto">
+                        <!-- Results go here -->
+                    </div>
+                </div>
+                <div class="mt-6 p-4 bg-black/40 border border-cyan-500/20 rounded-lg">
+                    <p id="log" class="text-xs italic text-center">Sytème prêt...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x00f2ff, 2);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        const geo = new THREE.IcosahedronGeometry(1, 15);
+        const mat = new THREE.MeshStandardMaterial({color: 0x00f2ff, wireframe: true, transparent: true, opacity: 0.8});
+        const core = new THREE.Mesh(geo, mat);
+        scene.add(core);
+        camera.position.z = 3;
+
+        function anim() {
+            requestAnimationFrame(anim);
+            core.rotation.y += 0.01;
+            core.rotation.x += 0.005;
+            renderer.render(scene, camera);
+        }
+        anim();
+
+        function setCoreColor(color) {
+            core.material.color.set(color);
+        }
+
+        async function execute(action) {
+            try {
+                await fetch('http://localhost:8080/api/execute', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({command_id: 'user', action: action})
+                });
+                document.getElementById('log').innerText = "Action envoyée !";
+            } catch(e) { document.getElementById('log').innerText = "Erreur serveur"; }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const log = document.getElementById('log');
+            const resultDiv = document.getElementById('result');
+
+            log.innerText = "Collecteur IA en cours...";
+            setCoreColor(0x00f2ff); // Blue
+
+            try {
+                const response = await fetch('http://localhost:8080/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                log.innerText = "Auditeur IA vérifie...";
+                setCoreColor(0xff00ea); // Pink/Red
+
+                setTimeout(() => {
+                    log.innerText = "Analyste IA génère le rapport...";
+                    setCoreColor(0xffd700); // Gold
+
+                    setTimeout(() => {
+                        resultDiv.classList.remove('hidden');
+                        resultDiv.innerHTML = `
+                            <p class="text-green-400 font-bold">✓ Analyse Terminée</p>
+                            <p><b>Montant:</b> ${data.extracted.Total_Amount || 'N/A'}</p>
+                            <p><b>Audit:</b> ${data.audit.is_valid ? 'Valide' : 'Anomalie'}</p>
+                            <p class="italic text-gray-400 mt-2">${data.insight}</p>
+                        `;
+                        log.innerText = " la tâche est accomplie !";
+                        setCoreColor(0x00f2ff);
+                    }, 1500);
+                }, 1500);
+
+            } catch(e) {
+                log.innerText = "Erreur lors du traitement";
+                setCoreColor(0xff0000);
+            }
+        }
+    </script>
+</body>
+</html>
